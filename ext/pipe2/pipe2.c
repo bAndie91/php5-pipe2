@@ -11,7 +11,6 @@
 static zend_function_entry pipe2_functions[] = {
      PHP_FE(posix_pipe, NULL)
      PHP_FE(posix_dup2, NULL)
-     PHP_FE(stream_dup2, NULL)
      {NULL, NULL, NULL}
 };
 
@@ -85,48 +84,52 @@ PHP_FUNCTION(posix_pipe)
 	}
 }
 
-PHP_FUNCTION(stream_dup2)
+PHP_FUNCTION(posix_dup2)
 {
-	zval *zstream_old;
-	zval *zstream_new;
+	zval *arg1;
+	zval *arg2;
+	int fd_old;
+	int fd_new;
 	php_stream *stream_old;
 	php_stream *stream_new;
 	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "rr", &zstream_old, &zstream_new) != SUCCESS)
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zz", &arg1, &arg2) == SUCCESS)
 	{
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Stream type resources needed.");
-		RETURN_NULL();
+		if(Z_TYPE_P(arg1) == IS_LONG)
+		{
+			fd_old = Z_LVAL_P(arg1);
+		}
+		else if(Z_TYPE_P(arg1) == IS_RESOURCE)
+		{
+			php_stream_from_zval(stream_old, &arg1);
+			fd_old = ((php_stdio_stream_data*)stream_old->abstract)->fd;
+		}
+		else goto invalid_args;
+		
+		if(Z_TYPE_P(arg2) == IS_LONG)
+		{
+			fd_new = Z_LVAL_P(arg2);
+		}
+		else if(Z_TYPE_P(arg2) == IS_RESOURCE)
+		{
+			php_stream_from_zval(stream_new, &arg2);
+			fd_new = ((php_stdio_stream_data*)stream_new->abstract)->fd;
+		}
+		else goto invalid_args;
+		
+
+		if(dup2(fd_old, fd_new) == -1)
+		{
+			// TODO: errno
+			RETURN_FALSE;
+		}
+		
+		RETURN_TRUE;
 	}
-	
-	php_stream_from_zval(stream_old, &zstream_old);
-	php_stream_from_zval(stream_new, &zstream_new);
-	
-	php_stdio_stream_data *abstract_old = (php_stdio_stream_data*)stream_old->abstract;
-	php_stdio_stream_data *abstract_new = (php_stdio_stream_data*)stream_new->abstract;
-	
-	if(dup2(abstract_old->fd, abstract_new->fd) == -1)
-	{
-		RETURN_FALSE;
-	}
-	
-	RETURN_TRUE;
+
+	invalid_args:
+	php_error_docref(NULL TSRMLS_CC, E_WARNING, "Integers or stream type resources needed.");
+	RETURN_NULL();
 }
 
-PHP_FUNCTION(posix_dup2)
-{
-	int fd_old;
-	int fd_new;
-	
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ll", &fd_old, &fd_new) != SUCCESS)
-	{
-		RETURN_NULL();
-	}
-	
-	if(dup2(fd_old, fd_new) == -1)
-	{
-		RETURN_FALSE;
-	}
-	
-	RETURN_TRUE;
-}
 
