@@ -11,6 +11,7 @@
 static zend_function_entry pipe2_functions[] = {
      PHP_FE(posix_pipe, NULL)
      PHP_FE(posix_dup2, NULL)
+     PHP_FE(posix_close, NULL)
      {NULL, NULL, NULL}
 };
 
@@ -59,6 +60,14 @@ static php_stream *pipe2_stream_from_fd(int fd, const char *mode)
 
 PHP_FUNCTION(posix_pipe)
 {
+	/*
+		Takes no arguments.
+		Returns 4-element array:
+		[0] stream resource of newly created pipe's reader end
+		[1] stream resource of newly created pipe's writer end
+		[2] file descriptor of newly created pipe's reader end
+		[3] file descriptor of newly created pipe's writer end
+	*/
 	int pipefd[2];
 	char *buf;
 
@@ -132,4 +141,18 @@ PHP_FUNCTION(posix_dup2)
 	RETURN_NULL();
 }
 
+PHP_FUNCTION(posix_close)
+{
+	long *arg1;
+	
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &arg1) == SUCCESS)
+	{
+		if(close((int)arg1) == 0)
+		{
+			RETURN_TRUE;
+		}
+		// TODO: errno
+	}
+	RETURN_FALSE;
+}
 
