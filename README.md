@@ -41,3 +41,6 @@ Returns TRUE if success, FALSE otherwise.
 
 # Example
 see example.php
+
+# issues
+Please submit issues via PR to some file `issue/TITLE.txt`.
